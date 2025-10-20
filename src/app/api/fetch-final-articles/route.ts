@@ -1,0 +1,321 @@
+import { NextResponse } from 'next/server'
+import connectDB from '@/lib/mongodb'
+import { generateArticleSummary, generateWhyItMatters } from '@/lib/gemini'
+
+// Tech sources
+const TECH_SOURCES = [
+  'techcrunch',
+  'wired',
+  'the-verge',
+  'ars-technica',
+  'venturebeat',
+  'engadget',
+  'mashable',
+  'recode',
+  'techradar',
+  'zdnet'
+]
+
+async function fetchNewsFromAPI() {
+  const NEWS_API_KEY = process.env.NEWS_API_KEY
+  if (!NEWS_API_KEY) {
+    throw new Error('News API key not found')
+  }
+
+  console.log('📰 Fetching news from tech sources with different queries...')
+  
+  const allArticles = []
+  
+  // Try different search queries to get more variety
+  const searchQueries = [
+    'artificial intelligence',
+    'machine learning',
+    'startup funding',
+    'technology innovation',
+    'software development',
+    'cloud computing',
+    'cybersecurity',
+    'mobile apps',
+    'data science',
+    'blockchain'
+  ]
+  
+  // Fetch using search queries
+  for (const query of searchQueries) {
+    try {
+      console.log(`   Searching for: ${query}...`)
+      
+      const response = await fetch(
+        `https://newsapi.org/v2/everything?q=${encodeURIComponent(query)}&language=en&sortBy=publishedAt&pageSize=2&apiKey=${NEWS_API_KEY}`
+      )
+      
+      if (!response.ok) {
+        console.log(`   ⚠️  Failed to search for ${query}: ${response.status}`)
+        continue
+      }
+      
+      const data = await response.json()
+      
+      if (data.articles && data.articles.length > 0) {
+        // Filter for tech sources and relevant content
+        const filteredArticles = data.articles.filter(article => {
+          if (!article.title || !article.description) return false
+          
+          const sourceName = article.source?.name?.toLowerCase() || ''
+          const isTechSource = TECH_SOURCES.some(techSource => 
+            sourceName.includes(techSource) || 
+            sourceName.includes('tech') ||
+            sourceName.includes('wired') ||
+            sourceName.includes('verge') ||
+            sourceName.includes('ars') ||
+            sourceName.includes('venture')
+          )
+          
+          if (!isTechSource) return false
+          
+          const titleLower = article.title.toLowerCase()
+          const descLower = article.description.toLowerCase()
+          const content = `${titleLower} ${descLower}`
+          
+          // Exclude unwanted content
+          const excludeKeywords = [
+            'politics', 'political', 'war', 'military', 'defense', 'election', 'government',
+            'congress', 'senate', 'president', 'biden', 'trump', 'ukraine', 'russia'
+          ]
+          
+          const hasExcludedKeywords = excludeKeywords.some(keyword => 
+            content.includes(keyword.toLowerCase())
+          )
+          
+          return !hasExcludedKeywords
+        })
+        
+        allArticles.push(...filteredArticles)
+        console.log(`   ✅ Found ${filteredArticles.length} relevant articles for ${query}`)
+      }
+    } catch (error) {
+      console.log(`   ❌ Error searching for ${query}:`, error)
+    }
+  }
+  
+  // Remove duplicates based on URL
+  const uniqueArticles = allArticles.filter((article, index, self) => 
+    index === self.findIndex(a => a.url === article.url)
+  )
+  
+  // Sort by published date
+  const sortedArticles = uniqueArticles
+    .sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
+  
+  console.log(`📊 Total unique articles found: ${sortedArticles.length}`)
+  
+  return sortedArticles
+}
+
+async function processArticleWithAI(article: any, delay: number = 0) {
+  if (delay > 0) {
+    console.log(`   ⏳ Waiting ${delay}ms to avoid rate limits...`)
+    await new Promise(resolve => setTimeout(resolve, delay))
+  }
+  
+  console.log(`🤖 Processing article: "${article.title}"`)
+  
+  try {
+    // Prepare content for AI processing
+    const articleContent = `
+Title: ${article.title}
+Description: ${article.description || ''}
+Content: ${article.content || article.description || ''}
+Source: ${article.source?.name || 'Unknown'}
+Published: ${article.publishedAt}
+URL: ${article.url}
+    `.trim()
+    
+    // Generate AI content
+    const quickSummary = await generateArticleSummary(articleContent, 'brief')
+    
+    // Wait between AI calls
+    await new Promise(resolve => setTimeout(resolve, 2000))
+    
+    const detailedSummary = await generateArticleSummary(articleContent, 'detailed')
+    
+    // Wait between AI calls
+    await new Promise(resolve => setTimeout(resolve, 2000))
+    
+    const whyItMatters = await generateWhyItMatters(articleContent)
+    
+    // Determine category based on content
+    const content = `${article.title} ${article.description || ''}`.toLowerCase()
+    let category = 'Technology' // default
+    
+    if (content.includes('ai') || content.includes('artificial intelligence') || content.includes('gpt') || content.includes('machine learning')) {
+      category = 'AI'
+    } else if (content.includes('startup') || content.includes('funding') || content.includes('venture') || content.includes('investment')) {
+      category = 'Startups'
+    } else if (content.includes('funding') || content.includes('investment') || content.includes('series a') || content.includes('series b')) {
+      category = 'Funding'
+    } else if (content.includes('machine learning') || content.includes('neural network') || content.includes('algorithm')) {
+      category = 'Machine Learning'
+    }
+    
+    // Get publisher logo
+    const publisherLogo = `https://logo.clearbit.com/${article.source?.name?.toLowerCase().replace(/\s+/g, '')}.com` || 
+                         'https://via.placeholder.com/100x100/3B82F6/FFFFFF?text=' + encodeURIComponent(article.source?.name || 'News')
+    
+    const processedArticle = {
+      title: article.title,
+      coverImage: article.urlToImage || 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&h=400&fit=crop',
+      publisherName: article.source?.name || 'Unknown Publisher',
+      publisherLogo: publisherLogo,
+      authorName: article.author || 'Staff Writer',
+      datePosted: new Date(article.publishedAt),
+      quickSummary: quickSummary,
+      detailedSummary: detailedSummary,
+      whyItMatters: whyItMatters,
+      sourceUrl: article.url,
+      category: category,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    }
+    
+    console.log(`   ✅ AI processing completed for: "${article.title}"`)
+    return processedArticle
+    
+  } catch (error) {
+    console.error(`   ❌ AI processing failed for: "${article.title}"`, error)
+    throw error
+  }
+}
+
+async function storeArticleInDatabase(article: any) {
+  try {
+    await connectDB()
+    const db = (await import('mongoose')).connection.db
+    
+    if (!db) {
+      throw new Error('Database connection not established')
+    }
+    
+    // Check for duplicates by sourceUrl
+    const existingArticle = await db.collection('articles').findOne({ sourceUrl: article.sourceUrl })
+    
+    if (existingArticle) {
+      console.log(`   ⚠️  Article already exists: "${article.title}"`)
+      return { status: 'duplicate', article: existingArticle }
+    }
+    
+    // Insert new article
+    const result = await db.collection('articles').insertOne(article)
+    
+    console.log(`   ✅ Stored in database: "${article.title}"`)
+    return { status: 'inserted', id: result.insertedId, article }
+    
+  } catch (error) {
+    console.error(`   ❌ Database storage failed for: "${article.title}"`, error)
+    throw error
+  }
+}
+
+export async function POST() {
+  try {
+    console.log('🚀 Starting final news fetching pipeline...')
+    
+    // Step 1: Fetch news articles
+    const rawArticles = await fetchNewsFromAPI()
+    
+    if (rawArticles.length === 0) {
+      return NextResponse.json({
+        success: false,
+        message: 'No articles found from specified sources',
+        timestamp: new Date().toISOString()
+      })
+    }
+    
+    // Get current article count
+    await connectDB()
+    const db = (await import('mongoose')).connection.db
+    const currentCount = await db.collection('articles').countDocuments()
+    
+    console.log(`📊 Current articles in database: ${currentCount}`)
+    console.log(`📊 Processing ${rawArticles.length} new articles...`)
+    
+    // Step 2: Process articles until we have 10 total
+    const processedArticles = []
+    const errors = []
+    let processedCount = 0
+    
+    for (let i = 0; i < rawArticles.length && (currentCount + processedCount) < 10; i++) {
+      const article = rawArticles[i]
+      try {
+        // Add delay between articles to avoid rate limits
+        const delay = i * 3000 // 3 seconds between each article
+        const processed = await processArticleWithAI(article, delay)
+        processedArticles.push(processed)
+        processedCount++
+      } catch (error) {
+        errors.push({
+          title: article.title,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        })
+      }
+    }
+    
+    console.log(`🤖 AI processing completed: ${processedArticles.length} successful, ${errors.length} failed`)
+    
+    // Step 3: Store in database
+    const storageResults = []
+    
+    for (const article of processedArticles) {
+      try {
+        const result = await storeArticleInDatabase(article)
+        storageResults.push(result)
+      } catch (error) {
+        storageResults.push({
+          status: 'error',
+          title: article.title,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        })
+      }
+    }
+    
+    // Summary
+    const inserted = storageResults.filter(r => r.status === 'inserted').length
+    const duplicates = storageResults.filter(r => r.status === 'duplicate').length
+    const failed = storageResults.filter(r => r.status === 'error').length
+    
+    console.log(`📊 Storage results: ${inserted} inserted, ${duplicates} duplicates, ${failed} failed`)
+    
+    // Get final count
+    const totalArticles = await db.collection('articles').countDocuments()
+    
+    console.log(`✅ Pipeline completed! Total articles in database: ${totalArticles}`)
+    
+    return NextResponse.json({
+      success: true,
+      message: 'Final news fetching pipeline completed successfully',
+      results: {
+        fetched: rawArticles.length,
+        processed: processedArticles.length,
+        inserted: inserted,
+        duplicates: duplicates,
+        failed: failed,
+        totalInDatabase: totalArticles,
+        targetReached: totalArticles >= 10
+      },
+      errors: errors,
+      timestamp: new Date().toISOString()
+    })
+    
+  } catch (error) {
+    console.error('❌ Pipeline failed:', error)
+    return NextResponse.json({
+      success: false,
+      message: 'Final news fetching pipeline failed',
+      error: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString()
+    }, { status: 500 })
+  }
+}
+
+
+
