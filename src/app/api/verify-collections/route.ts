@@ -56,7 +56,7 @@ export async function GET() {
       collections: collectionDetails,
       summary: {
         totalCollections: collections.length,
-        collectionsWithValidation: collectionDetails.filter(c => c.validation.enabled).length,
+        collectionsWithValidation: collectionDetails.filter((c: any) => c.validation.enabled).length,
         totalDocuments: collectionDetails.reduce((sum, c) => sum + c.documentCount, 0),
         totalIndexes: collectionDetails.reduce((sum, c) => sum + c.indexes.length, 0)
       },

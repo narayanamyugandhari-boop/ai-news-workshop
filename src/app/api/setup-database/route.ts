@@ -203,8 +203,8 @@ export async function POST() {
     console.log('✅ Chats collection created with validation and indexes')
 
     // Get collection info to verify
-    const articlesInfo = await db.collection('articles').stats()
-    const chatsInfo = await db.collection('chats').stats()
+    const articlesCount = await db.collection('articles').countDocuments()
+    const chatsCount = await db.collection('chats').countDocuments()
 
     console.log('✅ Database setup completed successfully!')
 
@@ -214,16 +214,12 @@ export async function POST() {
       collections: {
         articles: {
           name: 'articles',
-          count: articlesInfo.count,
-          size: articlesInfo.size,
-          indexes: articlesInfo.nindexes,
+          count: articlesCount,
           validation: 'Enabled with strict validation rules'
         },
         chats: {
           name: 'chats',
-          count: chatsInfo.count,
-          size: chatsInfo.size,
-          indexes: chatsInfo.nindexes,
+          count: chatsCount,
           validation: 'Enabled with strict validation rules'
         }
       },

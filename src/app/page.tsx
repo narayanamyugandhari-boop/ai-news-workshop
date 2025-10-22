@@ -1,7 +1,7 @@
 'use client'
 
 import { NewsCard } from '@/components/NewsCard'
-import { Article } from '@/types'
+import type { Article } from '@/types'
 import { useState, useEffect } from 'react'
 
 interface ArticlesResponse {

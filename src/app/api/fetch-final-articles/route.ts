@@ -58,7 +58,7 @@ async function fetchNewsFromAPI() {
       
       if (data.articles && data.articles.length > 0) {
         // Filter for tech sources and relevant content
-        const filteredArticles = data.articles.filter(article => {
+        const filteredArticles = data.articles.filter((article: any) => {
           if (!article.title || !article.description) return false
           
           const sourceName = article.source?.name?.toLowerCase() || ''
@@ -99,8 +99,8 @@ async function fetchNewsFromAPI() {
   }
   
   // Remove duplicates based on URL
-  const uniqueArticles = allArticles.filter((article, index, self) => 
-    index === self.findIndex(a => a.url === article.url)
+  const uniqueArticles = allArticles.filter((article: any, index: number, self: any[]) => 
+    index === self.findIndex((a: any) => a.url === article.url)
   )
   
   // Sort by published date
@@ -235,6 +235,7 @@ export async function POST() {
     await connectDB()
     const db = (await import('mongoose')).connection.db
     const currentCount = await db.collection('articles').countDocuments()
+
     
     console.log(`📊 Current articles in database: ${currentCount}`)
     console.log(`📊 Processing ${rawArticles.length} new articles...`)
@@ -279,9 +280,9 @@ export async function POST() {
     }
     
     // Summary
-    const inserted = storageResults.filter(r => r.status === 'inserted').length
-    const duplicates = storageResults.filter(r => r.status === 'duplicate').length
-    const failed = storageResults.filter(r => r.status === 'error').length
+    const inserted = storageResults.filter((r: any) => r.status === 'inserted').length
+    const duplicates = storageResults.filter((r: any) => r.status === 'duplicate').length
+    const failed = storageResults.filter((r: any) => r.status === 'error').length
     
     console.log(`📊 Storage results: ${inserted} inserted, ${duplicates} duplicates, ${failed} failed`)
     

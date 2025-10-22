@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Article, ChatMessage } from '@/types'
+import type { Article, ChatMessage } from '@/types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'

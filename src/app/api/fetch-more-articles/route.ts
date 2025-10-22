@@ -59,7 +59,7 @@ async function fetchNewsFromAPI() {
       
       if (data.articles && data.articles.length > 0) {
         // Filter articles by category and exclude unwanted content
-        const filteredArticles = data.articles.filter(article => {
+        const filteredArticles = data.articles.filter((article: any) => {
           if (!article.title || !article.description) return false
           
           const titleLower = article.title.toLowerCase()
@@ -279,9 +279,9 @@ export async function POST() {
     }
     
     // Summary
-    const inserted = storageResults.filter(r => r.status === 'inserted').length
-    const duplicates = storageResults.filter(r => r.status === 'duplicate').length
-    const failed = storageResults.filter(r => r.status === 'error').length
+    const inserted = storageResults.filter((r: any) => r.status === 'inserted').length
+    const duplicates = storageResults.filter((r: any) => r.status === 'duplicate').length
+    const failed = storageResults.filter((r: any) => r.status === 'error').length
     
     console.log(`📊 Storage results: ${inserted} inserted, ${duplicates} duplicates, ${failed} failed`)
     

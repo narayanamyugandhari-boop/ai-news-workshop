@@ -1,6 +1,6 @@
 'use client'
 
-import { Article } from '@/types'
+import type { Article } from '@/types'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'

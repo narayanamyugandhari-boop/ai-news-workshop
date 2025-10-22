@@ -26,7 +26,7 @@ async function fetchOneMoreArticle() {
       // Filter for tech sources and relevant content
       const techSources = ['techcrunch', 'wired', 'the-verge', 'ars-technica', 'venturebeat', 'engadget', 'mashable', 'recode', 'techradar', 'zdnet']
       
-      const filteredArticles = data.articles.filter(article => {
+      const filteredArticles = data.articles.filter((article: any) => {
         if (!article.title || !article.description) return false
         
         const sourceName = article.source?.name?.toLowerCase() || ''

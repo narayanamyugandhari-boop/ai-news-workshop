@@ -57,7 +57,7 @@ export async function GET() {
     ]
     
     articles.forEach(article => {
-      const missingFields = requiredFields.filter(field => !article[field])
+      const missingFields = requiredFields.filter((field: string) => !article[field])
       if (missingFields.length === 0) {
         analysis.hasAllRequiredFields++
       } else {
@@ -66,7 +66,7 @@ export async function GET() {
     })
     
     // Remove duplicates from missing fields
-    analysis.missingFields = [...new Set(analysis.missingFields)]
+    analysis.missingFields = Array.from(new Set(analysis.missingFields))
     
     console.log('✅ Article verification completed')
     

@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Article } from '@/types'
+import type { Article } from '@/types'
 import Image from 'next/image'
 import Link from 'next/link'
 

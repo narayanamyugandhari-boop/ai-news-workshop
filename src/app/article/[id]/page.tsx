@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation'
 import { ArticlePage } from '@/components/ArticlePage'
-import { Article } from '@/types'
+import type { Article } from '@/types'
 
 interface ArticlePageProps {
   params: Promise<{ id: string }>
