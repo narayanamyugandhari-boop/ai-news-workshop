@@ -20,14 +20,19 @@ export async function GET() {
     const collectionDetails = []
 
     for (const collection of collections) {
-      const stats = await db.collection(collection.name).stats()
+      // Get document count using countDocuments()
+      const count = await db.collection(collection.name).countDocuments()
+      
+      // Get collection options
       const options = await db.collection(collection.name).options()
+      
+      // Get indexes
+      const indexes = await db.collection(collection.name).indexes()
       
       collectionDetails.push({
         name: collection.name,
-        count: stats.count,
-        size: stats.size,
-        indexes: stats.nindexes,
+        count: count,
+        indexes: indexes.length,
         validation: options.validator || 'No validation',
         validationLevel: options.validationLevel || 'Not set',
         validationAction: options.validationAction || 'Not set'
